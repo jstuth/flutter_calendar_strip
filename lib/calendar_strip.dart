@@ -6,14 +6,25 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import './date-utils.dart';
 
+typedef MonthNameWidgetBuilder = Widget Function(String monthLabel);
+typedef DateTileWidgetBuilder = Widget Function(
+  DateTime date,
+  DateTime selectedDate,
+  int rowIndex,
+  String dayName,
+  bool isDateMarked,
+  bool isDateAvailable,
+);
+
 class CalendarStrip extends StatefulWidget {
   // This widget is the root of your application.
-  final Function onDateSelected;
-  final Function onWeekSelected;
-  final Function dateTileBuilder;
+  final Function(DateTime date) onDateSelected;
+  final Function(DateTime date) onWeekSelected;
+  final bool Function(DateTime date) validDayPredicate;
+  final DateTileWidgetBuilder dateTileBuilder;
   final BoxDecoration containerDecoration;
   final double containerHeight;
-  final Function monthNameWidget;
+  final MonthNameWidgetBuilder monthNameWidget;
   final Color iconColor;
   final DateTime selectedDate;
   final DateTime startDate;
@@ -42,6 +53,7 @@ class CalendarStrip extends StatefulWidget {
     this.rightIcon,
     this.leftIcon,
     this.locale = 'en_US',
+    this.validDayPredicate,
   });
 
   State<CalendarStrip> createState() =>
@@ -219,7 +231,9 @@ class CalendarStripState extends State<CalendarStrip>
     var dateRange = calculateDateRange("PREV");
     setState(() {
       rowStartingDate = rowStartingDate.subtract(Duration(days: 7));
-      widget.onWeekSelected(rowStartingDate);
+      if (widget.onWeekSelected != null) {
+        widget.onWeekSelected(rowStartingDate);
+      }
       isOnEndingWeek = dateRange['isEndingWeekOnRange'];
       isOnStartingWeek = dateRange['isStartingWeekOnRange'];
     });
@@ -229,7 +243,9 @@ class CalendarStripState extends State<CalendarStrip>
     var dateRange = calculateDateRange("NEXT");
     setState(() {
       rowStartingDate = rowStartingDate.add(Duration(days: 7));
-      widget.onWeekSelected(rowStartingDate);
+      if (widget.onWeekSelected != null) {
+        widget.onWeekSelected(rowStartingDate);
+      }
       isOnEndingWeek = dateRange['isEndingWeekOnRange'];
       isOnStartingWeek = dateRange['isStartingWeekOnRange'];
     });
@@ -238,16 +254,24 @@ class CalendarStripState extends State<CalendarStrip>
   onDateTap(date) {
     if (!doesDateRangeExists) {
       setState(() {
-        selectedDate = date;
-        widget.onDateSelected(date);
+        if (widget.validDayPredicate != null) {
+          if (widget.validDayPredicate(date)) {
+            setSelectedDate(date);
+          }
+        } else {
+          setSelectedDate(date);
+        }
       });
-    } else if (!isDateBefore(date, widget.startDate) &&
-        !isDateAfter(date, widget.endDate)) {
+    } else if (checkDateAvailability(date)) {
       setState(() {
-        selectedDate = date;
-        widget.onDateSelected(date);
+        setSelectedDate(date);
       });
     } else {}
+  }
+
+  setSelectedDate(date) {
+    selectedDate = date;
+    widget.onDateSelected(date);
   }
 
   nullOrDefault(var normalValue, var defaultValue) {
@@ -300,18 +324,25 @@ class CalendarStripState extends State<CalendarStrip>
     }
   }
 
-  checkOutOfRangeStatus(DateTime date) {
+  checkDateAvailability(DateTime date) {
     date = DateTime(date.year, date.month, date.day);
+    bool dateAvailable = false;
     if (widget.startDate != null && widget.endDate != null) {
       if (!isDateBefore(date, widget.startDate) &&
           !isDateAfter(date, widget.endDate)) {
-        return false;
+        dateAvailable = true;
       } else {
-        return true;
+        dateAvailable = false;
       }
     } else {
-      return false;
+      dateAvailable = true;
     }
+
+    if (widget.validDayPredicate != null) {
+      dateAvailable = dateAvailable && widget.validDayPredicate(date);
+    }
+
+    return dateAvailable;
   }
 
   onStripDrag(DragEndDetails details) {
@@ -352,7 +383,13 @@ class CalendarStripState extends State<CalendarStrip>
   }
 
   Widget dateTileBuilder(DateTime date, DateTime selectedDate, int rowIndex) {
-    bool isDateOutOfRange = checkOutOfRangeStatus(date);
+    bool isDateAvailable = checkDateAvailability(date);
+
+    double width = MediaQuery.of(context).size.width;
+    print("Screen widht: $width");
+    String format = width < 600 ? 'E' : 'EEEE';
+    String dayString = DateFormat(format, widget.locale).format(date);
+
     if (widget.dateTileBuilder != null) {
       return Expanded(
         child: SlideFadeTransition(
@@ -367,9 +404,9 @@ class CalendarStripState extends State<CalendarStrip>
                 date,
                 selectedDate,
                 rowIndex,
-                DateFormat('E', widget.locale).format(date),
+                dayString,
                 isDateMarked(date),
-                isDateOutOfRange,
+                isDateAvailable,
               ),
             ),
           ),
@@ -381,7 +418,7 @@ class CalendarStripState extends State<CalendarStrip>
     var normalStyle = TextStyle(
         fontSize: 17,
         fontWeight: FontWeight.w800,
-        color: isDateOutOfRange ? Colors.black26 : Colors.black54);
+        color: isDateAvailable ? Colors.black26 : Colors.black54);
     return Expanded(
       child: SlideFadeTransition(
         delay: 30 + (30 * rowIndex),
@@ -399,7 +436,7 @@ class CalendarStripState extends State<CalendarStrip>
             child: Column(
               children: [
                 Text(
-                  DateFormat('EEEE', widget.locale).format(date),
+                  dayString,
                   style: TextStyle(
                     fontSize: 14.5,
                     color: !isSelectedDate ? Colors.black : Colors.white,
