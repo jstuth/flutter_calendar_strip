@@ -9,7 +9,7 @@ import './date-utils.dart';
 typedef MonthNameWidgetBuilder = Widget Function(String monthLabel);
 typedef DateTileWidgetBuilder = Widget Function(
   DateTime date,
-  DateTime selectedDate,
+  DateTime? selectedDate,
   int rowIndex,
   String dayName,
   bool isDateMarked,
@@ -19,27 +19,27 @@ typedef DateTileWidgetBuilder = Widget Function(
 class CalendarStrip extends StatefulWidget {
   // This widget is the root of your application.
   final Function(DateTime date) onDateSelected;
-  final Function(DateTime date) onWeekSelected;
-  final bool Function(DateTime date) validDayPredicate;
-  final DateTileWidgetBuilder dateTileBuilder;
-  final BoxDecoration containerDecoration;
-  final double containerHeight;
-  final MonthNameWidgetBuilder monthNameWidget;
-  final Color iconColor;
-  final DateTime selectedDate;
-  final DateTime startDate;
-  final DateTime endDate;
-  final List<DateTime> markedDates;
+  final Function(DateTime date)? onWeekSelected;
+  final bool Function(DateTime date)? validDayPredicate;
+  final DateTileWidgetBuilder? dateTileBuilder;
+  final BoxDecoration? containerDecoration;
+  final double? containerHeight;
+  final MonthNameWidgetBuilder? monthNameWidget;
+  final Color? iconColor;
+  final DateTime? selectedDate;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final List<DateTime>? markedDates;
   final bool addSwipeGesture;
   final bool weekStartsOnSunday;
-  final Icon rightIcon;
-  final Icon leftIcon;
-  final String locale;
+  final Icon? rightIcon;
+  final Icon? leftIcon;
+  final String? locale;
 
   CalendarStrip({
     this.addSwipeGesture = false,
     this.weekStartsOnSunday = false,
-    @required this.onDateSelected,
+    required this.onDateSelected,
     this.onWeekSelected,
     this.dateTileBuilder,
     this.containerDecoration,
@@ -47,8 +47,8 @@ class CalendarStrip extends StatefulWidget {
     this.monthNameWidget,
     this.iconColor,
     this.selectedDate,
-    this.startDate,
-    this.endDate,
+    required this.startDate,
+    required this.endDate,
     this.markedDates,
     this.rightIcon,
     this.leftIcon,
@@ -62,24 +62,26 @@ class CalendarStrip extends StatefulWidget {
 
 class CalendarStripState extends State<CalendarStrip>
     with TickerProviderStateMixin {
+  late String monthLabel;
+  late DateTime lastDayOfMonth;
+  late DateTime rowStartingDate;
+
+  DateTime? today;
+  DateTime? selectedDate;
+
   DateTime currentDate = DateTime.utc(
       DateTime.now().year, DateTime.now().month, DateTime.now().day);
-  DateTime selectedDate;
-  String monthLabel;
   bool inBetweenMonths = false;
-  DateTime rowStartingDate;
   double opacity = 0.0;
-  DateTime lastDayOfMonth;
   TextStyle monthLabelStyle = TextStyle(
       fontSize: 17, fontWeight: FontWeight.w600, color: Colors.black87);
   TextStyle selectedDateStyle =
       TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white);
   bool isOnEndingWeek = false, isOnStartingWeek = false;
   bool doesDateRangeExists = false;
-  DateTime today;
 
   CalendarStripState(
-      DateTime selectedDate, DateTime startDate, DateTime endDate) {
+      DateTime? selectedDate, DateTime? startDate, DateTime? endDate) {
     today = getDateOnly(DateTime.now());
     lastDayOfMonth = CalendarDateUtils.getLastDayOfMonth(currentDate);
     runPresetsAndExceptions(selectedDate, startDate, endDate);
@@ -122,7 +124,7 @@ class CalendarStripState extends State<CalendarStrip>
       throw Exception("Selected Date is out of range from start and end dates");
     } else {
       setState(() {
-        selectedDate = getDateOnly(widget.selectedDate);
+        selectedDate = getDateOnly(widget.selectedDate ?? DateTime.now());
       });
     }
   }
@@ -134,14 +136,15 @@ class CalendarStripState extends State<CalendarStrip>
     int subtractDuration = widget.weekStartsOnSunday == true
         ? currentDate.weekday
         : currentDate.weekday - 1;
-    rowStartingDate = rowStartingDate != null
-        ? rowStartingDate
-        : currentDate.subtract(Duration(days: subtractDuration));
+    rowStartingDate = currentDate.subtract(Duration(days: subtractDuration));
+    // rowStartingDate != null
+    //     ? rowStartingDate
+    // : currentDate.subtract(Duration(days: subtractDuration));
     var dateRange = calculateDateRange(null);
 
     setState(() {
-      isOnEndingWeek = dateRange['isEndingWeekOnRange'];
-      isOnStartingWeek = dateRange['isStartingWeekOnRange'];
+      isOnEndingWeek = dateRange['isEndingWeekOnRange'] ?? false;
+      isOnStartingWeek = dateRange['isStartingWeekOnRange'] ?? false;
     });
   }
 
@@ -193,7 +196,7 @@ class CalendarStripState extends State<CalendarStrip>
     date = getDateOnly(date);
     bool _isDateMarked = false;
     if (widget.markedDates != null) {
-      widget.markedDates.forEach((DateTime eachMarkedDate) {
+      widget.markedDates!.forEach((DateTime eachMarkedDate) {
         if (getDateOnly(eachMarkedDate) == date) {
           _isDateMarked = true;
         }
@@ -232,10 +235,10 @@ class CalendarStripState extends State<CalendarStrip>
     setState(() {
       rowStartingDate = rowStartingDate.subtract(Duration(days: 7));
       if (widget.onWeekSelected != null) {
-        widget.onWeekSelected(rowStartingDate);
+        widget.onWeekSelected!(rowStartingDate);
       }
-      isOnEndingWeek = dateRange['isEndingWeekOnRange'];
-      isOnStartingWeek = dateRange['isStartingWeekOnRange'];
+      isOnEndingWeek = dateRange['isEndingWeekOnRange']!;
+      isOnStartingWeek = dateRange['isStartingWeekOnRange']!;
     });
   }
 
@@ -244,10 +247,10 @@ class CalendarStripState extends State<CalendarStrip>
     setState(() {
       rowStartingDate = rowStartingDate.add(Duration(days: 7));
       if (widget.onWeekSelected != null) {
-        widget.onWeekSelected(rowStartingDate);
+        widget.onWeekSelected!(rowStartingDate);
       }
-      isOnEndingWeek = dateRange['isEndingWeekOnRange'];
-      isOnStartingWeek = dateRange['isStartingWeekOnRange'];
+      isOnEndingWeek = dateRange['isEndingWeekOnRange']!;
+      isOnStartingWeek = dateRange['isStartingWeekOnRange']!;
     });
   }
 
@@ -255,7 +258,7 @@ class CalendarStripState extends State<CalendarStrip>
     if (!doesDateRangeExists) {
       setState(() {
         if (widget.validDayPredicate != null) {
-          if (widget.validDayPredicate(date)) {
+          if (widget.validDayPredicate!(date)) {
             setSelectedDate(date);
           }
         } else {
@@ -283,7 +286,7 @@ class CalendarStripState extends State<CalendarStrip>
 
   monthLabelWidget(monthLabel) {
     if (widget.monthNameWidget != null) {
-      return widget.monthNameWidget(monthLabel);
+      return widget.monthNameWidget!(monthLabel);
     }
     return Container(
         child: Text(monthLabel, style: monthLabelStyle),
@@ -339,15 +342,17 @@ class CalendarStripState extends State<CalendarStrip>
     }
 
     if (widget.validDayPredicate != null) {
-      dateAvailable = dateAvailable && widget.validDayPredicate(date);
+      dateAvailable = dateAvailable && widget.validDayPredicate!(date);
     }
 
     return dateAvailable;
   }
 
   onStripDrag(DragEndDetails details) {
-    if (details.primaryVelocity == 0 || !widget.addSwipeGesture) return;
-    if (details.primaryVelocity < 0) {
+    if (details.primaryVelocity == null ||
+        details.primaryVelocity == 0 ||
+        !widget.addSwipeGesture) return;
+    if (details.primaryVelocity! < 0) {
       if (!isOnEndingWeek) {
         onNextRow();
       }
@@ -382,7 +387,7 @@ class CalendarStripState extends State<CalendarStrip>
     ]);
   }
 
-  Widget dateTileBuilder(DateTime date, DateTime selectedDate, int rowIndex) {
+  Widget dateTileBuilder(DateTime date, DateTime? selectedDate, int rowIndex) {
     bool isDateAvailable = checkDateAvailability(date);
 
     double width = MediaQuery.of(context).size.width;
@@ -400,7 +405,7 @@ class CalendarStripState extends State<CalendarStrip>
             customBorder: CircleBorder(),
             onTap: () => onDateTap(date),
             child: Container(
-              child: widget.dateTileBuilder(
+              child: widget.dateTileBuilder!(
                 date,
                 selectedDate,
                 rowIndex,
@@ -414,7 +419,8 @@ class CalendarStripState extends State<CalendarStrip>
       );
     }
 
-    bool isSelectedDate = date.compareTo(selectedDate) == 0;
+    bool isSelectedDate =
+        selectedDate != null ? date.compareTo(selectedDate) == 0 : false;
     var normalStyle = TextStyle(
         fontSize: 17,
         fontWeight: FontWeight.w800,
@@ -465,12 +471,12 @@ class CalendarStripState extends State<CalendarStrip>
 
 class SlideFadeTransition extends StatefulWidget {
   final Widget child;
-  final int delay;
   final String id;
-  final Curve curve;
+  final int? delay;
+  final Curve? curve;
 
   SlideFadeTransition(
-      {@required this.child, @required this.id, this.delay, this.curve});
+      {required this.child, required this.id, this.delay, this.curve});
 
   @override
   SlideFadeTransitionState createState() => SlideFadeTransitionState();
@@ -478,8 +484,8 @@ class SlideFadeTransition extends StatefulWidget {
 
 class SlideFadeTransitionState extends State<SlideFadeTransition>
     with TickerProviderStateMixin {
-  AnimationController _animController;
-  Animation<Offset> _animOffset;
+  late AnimationController _animController;
+  late Animation<Offset> _animOffset;
   bool _disposed = false;
 
   @override
@@ -488,7 +494,7 @@ class SlideFadeTransitionState extends State<SlideFadeTransition>
     _animController =
         AnimationController(vsync: this, duration: Duration(milliseconds: 400));
     final _curve = CurvedAnimation(
-        curve: widget.curve != null ? widget.curve : Curves.decelerate,
+        curve: widget.curve != null ? widget.curve! : Curves.decelerate,
         parent: _animController);
     _animOffset =
         Tween<Offset>(begin: const Offset(0.0, 0.25), end: Offset.zero)
@@ -498,7 +504,7 @@ class SlideFadeTransitionState extends State<SlideFadeTransition>
       if (!_disposed) _animController.forward();
     } else {
       _animController.reset();
-      Future.delayed(Duration(milliseconds: widget.delay), () {
+      Future.delayed(Duration(milliseconds: widget.delay!), () {
         if (!_disposed) _animController.forward();
       });
     }
@@ -509,7 +515,7 @@ class SlideFadeTransitionState extends State<SlideFadeTransition>
     super.didUpdateWidget(oldWidget);
     if (widget.id != oldWidget.id) {
       _animController.reset();
-      Future.delayed(Duration(milliseconds: widget.delay), () {
+      Future.delayed(Duration(milliseconds: widget.delay ?? 0), () {
         if (!_disposed) _animController.forward();
       });
     }
