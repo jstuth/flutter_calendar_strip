@@ -70,13 +70,22 @@ class CalendarStripState extends State<CalendarStrip>
   DateTime? selectedDate;
 
   DateTime currentDate = DateTime.utc(
-      DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    DateTime.now().year,
+    DateTime.now().month,
+    DateTime.now().day,
+  );
   bool inBetweenMonths = false;
   double opacity = 0.0;
   TextStyle monthLabelStyle = TextStyle(
-      fontSize: 17, fontWeight: FontWeight.w600, color: Colors.black87);
-  TextStyle selectedDateStyle =
-      TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white);
+    fontSize: 17,
+    fontWeight: FontWeight.w600,
+    color: Colors.black87,
+  );
+  TextStyle selectedDateStyle = TextStyle(
+    fontSize: 17,
+    fontWeight: FontWeight.w800,
+    color: Colors.white,
+  );
   bool isOnEndingWeek = false, isOnStartingWeek = false;
   bool doesDateRangeExists = false;
 
@@ -136,10 +145,9 @@ class CalendarStripState extends State<CalendarStrip>
     int subtractDuration = widget.weekStartsOnSunday == true
         ? currentDate.weekday
         : currentDate.weekday - 1;
+
     rowStartingDate = currentDate.subtract(Duration(days: subtractDuration));
-    // rowStartingDate != null
-    //     ? rowStartingDate
-    // : currentDate.subtract(Duration(days: subtractDuration));
+
     var dateRange = calculateDateRange(null);
 
     setState(() {
@@ -374,7 +382,7 @@ class CalendarStripState extends State<CalendarStrip>
     return Column(children: [
       monthLabelWidget(monthLabel),
       Container(
-          padding: EdgeInsets.all(0),
+          padding: EdgeInsets.only(top: 3), //all(0),
           child: GestureDetector(
             onHorizontalDragEnd: (DragEndDetails details) =>
                 onStripDrag(details),
@@ -460,7 +468,7 @@ class CalendarStripState extends State<CalendarStrip>
 
   build(BuildContext context) {
     return Container(
-      height: nullOrDefault(widget.containerHeight, 90.0),
+      // height: nullOrDefault(widget.containerHeight, 90.0),
       child: buildDateRow(),
       decoration: widget.containerDecoration != null
           ? widget.containerDecoration
